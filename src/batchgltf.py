@@ -129,6 +129,7 @@ class App(tk.Tk):
     self.invert_transparency.set(0)
     self.default_lighting.set(0)
     self.delete_dae.set(0)
+    self.convertbutton.config(state = tk.DISABLED)
 
   def openSettings(self, event = None):
     file = tkFileDialog.askopenfile(parent = self, title = "Select Settings File:")
@@ -137,9 +138,11 @@ class App(tk.Tk):
     for line in file:
       l = line.strip().split('=')
       if l[0] == 'src':
-        self.fromlist.insert(tk.END, l[1])
+        path = os.path.normpath(l[1])
+        self.fromlist.insert(tk.END, path)
       elif l[0] == 'dst':
-        self.tolist.insert(tk.END, l[1])
+        path = os.path.normpath(l[1])
+        self.tolist.insert(tk.END, path)
       elif l[0] == 'params':
         params = l[1].split(';')
         for p in params:
@@ -152,14 +155,15 @@ class App(tk.Tk):
         for o in options:
           if o == "deldae": self.delete_dae.set(1)
     file.close()
+    self.convertbutton.config(state = tk.NORMAL)
 
   def saveSettings(self, event = None):
     file = tkFileDialog.asksaveasfile(parent = self, title = "Set Settings File:")
     if not file: return
     file.write('{}\n'.format(self.MAGIC))
     for i in range(0, self.fromlist.size()):
-      source = self.fromlist.get(i)
-      dest = self.tolist.get(i)
+      source = os.path.normpath(self.fromlist.get(i))
+      dest = os.path.normpath(self.tolist.get(i))
       file.write('src={}\n'.format(source))
       file.write('dst={}\n'.format(dest))
     file.write('params={}\n'.format(';'.join(self.getParams())))
@@ -172,6 +176,7 @@ class App(tk.Tk):
   def onFromButton(self, event = None):
     folder = tkFileDialog.askdirectory(mustexist = True, parent = self, title="Select a source folder with COLLADA files:")
     if not folder: return
+    folder = os.path.normpath(folder)
     self.fromlist.insert(tk.END, folder)
     self.tolist.insert(tk.END, folder)
     self.convertbutton.config(state = tk.NORMAL)
@@ -189,31 +194,28 @@ class App(tk.Tk):
     item = item[0]
     folder = tkFileDialog.askdirectory(title="Select a target folder:")
     if not folder: return
+    folder = os.path.normpath(folder)
     self.tolist.delete(item)
     self.tolist.insert(item, folder)
-    #self.tolist.selection_set( item )
 
   def onFromListKeyDown(self, event):
     key = event.keysym
     item = self.fromlist.curselection()
+
     if not item: return
-    item = item[0]
-    if key == 'Delete':
+    item = int(item[0])
+
+    jumps = {'Home': -99999, 'End' : 99999, 'Down': 1, 'Up'  : -1, 'Prior': -10, 'Next': 10}
+
+    if key == 'Delete' or key == 'BackSpace':
       self.fromlist.delete(item)
       self.tolist.delete(item)
       if self.fromlist.size() == 0:
         self.convertbutton.config(state = tk.DISABLED)
-
-    elif key == 'Down':
-      if item < self.fromlist.size()-1:
-        for l in [self.fromlist, self.tolist]:
-          l.select_clear(0, tk.END)
-          l.selection_set(item + 1)
-    elif key == 'Up':
-      if item > 0:
-        for l in [self.fromlist, self.tolist]:
-          l.select_clear(0, tk.END)
-          l.selection_set(item - 1)
+    elif key in jumps:
+      for l in [self.fromlist, self.tolist]:
+        l.select_clear(0, tk.END)
+        l.selection_set( max(0, min(self.fromlist.size()-1, item + jumps[key])))
 
   def convert(self):
     progress = ProgressWindow()
@@ -247,15 +249,18 @@ def convertFiles(sourcelist, destlist, parameters, progress = None):
     for f in os.listdir(source):
       if f.lower().endswith(".dae"):
         destfile = f[:f.rindex('.')]
-        output = convertFile(os.path.join(source, f), os.path.join(dest, destfile), parameters)
-        if not progress: 
-          print output
-        else: 
-          progress.add(output)
-      
-def convertFile(file, dest, parameters):
-  output = subprocess.check_output(['collada2gltf', '-f', file, '-o', dest] + parameters)
-  return output
+        convertFile(os.path.join(source, f), os.path.join(dest, destfile), parameters, progress)
+        
+def convertFile(file, dest, parameters, progress = None):
+  cmd = ['collada2gltf', '-f', file, '-o', dest] + parameters
+  cmdstr = ' '.join(cmd) + '\n'
+  output = subprocess.check_output(cmd)
+  if not progress: 
+    print cmdstr
+    print output
+  else: 
+    progress.add(cmdstr)
+    progress.add(output)
 
 def runFromCLI(param):
   file = open(param, mode = 'r')
