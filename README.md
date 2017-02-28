@@ -1,10 +1,10 @@
 # batchgltf
 
-Requirements:
+**Requirements:**
 * python
 * [COLLADA2glTF](https://github.com/KhronosGroup/COLLADA2GLTF) available to run in current path. You can download a [precompiled binary](https://github.com/KhronosGroup/glTF/releases).
 
-Usage:
+**Usage:**
 
 ```
 $ python batchgltf.py
@@ -26,3 +26,6 @@ python batchgltf.py <settings_file>
 ```
 
 Please remember that a `collada2gltf` executable must be available in the current path.
+
+**Disclaimer:**
+This is very draft and untested. Please use with care. The author does not make responsible for the damage it may cause in your files or your life.
