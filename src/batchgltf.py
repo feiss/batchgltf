@@ -249,11 +249,15 @@ def convertFiles(sourcelist, destlist, parameters, progress = None):
     for f in os.listdir(source):
       if f.lower().endswith(".dae"):
         destfile = f[:f.rindex('.')]
-        convertFile(os.path.join(source, f), os.path.join(dest, destfile), parameters, progress)
+        convertFile(os.path.join(source, f), dest, destfile, parameters, progress)
         
-def convertFile(file, dest, parameters, progress = None):
-  cmd = ['collada2gltf', '-f', file, '-o', dest] + parameters
+def convertFile(file, outputfolder, name, parameters, progress = None):
+  cmd = ['collada2gltf', '-f', file, '-o', name] + parameters
   cmdstr = ' '.join(cmd) + '\n'
+
+  currdir = os.getcwd()
+  os.chdir(outputfolder)
+
   output = subprocess.check_output(cmd)
   if not progress: 
     print cmdstr
@@ -261,6 +265,9 @@ def convertFile(file, dest, parameters, progress = None):
   else: 
     progress.add(cmdstr)
     progress.add(output)
+
+  os.chdir(currdir)
+
 
 def runFromCLI(param):
   file = open(param, mode = 'r')
