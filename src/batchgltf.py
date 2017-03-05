@@ -116,7 +116,7 @@ class App(tk.Tk):
 
     self.convertbutton = tk.Button(self, state=tk.DISABLED, text="CONVERT", command = self.convert, width = 30, font = 'bold')
     self.convertbutton.grid(row = 4, column = 0, padx = 10, pady = 10, columnspan = 3, ipady = 2)
-
+    
   def yview(self, *args):
     apply(self.fromlist.yview, args)
     apply(self.tolist.yview, args)
@@ -226,7 +226,7 @@ class App(tk.Tk):
       sourcelist.append(self.fromlist.get(i))
       destlist.append(self.tolist.get(i))
     convertFiles(sourcelist, destlist, parameters, progress)
-      
+
   def getParams(self):
     params = []
     if self.embed_resources.get(): params.append('-e')
@@ -243,6 +243,13 @@ class App(tk.Tk):
 
 
 def convertFiles(sourcelist, destlist, parameters, progress = None):
+  if not checkCommand():
+    if progress: 
+      progress.destroy()
+      tkMessageBox.showerror('batchgltf', 'collada2gltf not found in path')
+    else: print 'ERROR: collada2gltf not found in path\n'
+    return False
+
   for i in range(0, len(sourcelist)):
     source = sourcelist[i]
     dest = destlist[i]
@@ -250,7 +257,8 @@ def convertFiles(sourcelist, destlist, parameters, progress = None):
       if f.lower().endswith(".dae"):
         destfile = f[:f.rindex('.')]
         convertFile(os.path.join(source, f), dest, destfile, parameters, progress)
-        
+  return True
+
 def convertFile(file, outputfolder, name, parameters, progress = None):
   cmd = ['collada2gltf', '-f', file, '-o', name] + parameters
   cmdstr = ' '.join(cmd) + '\n'
@@ -268,6 +276,14 @@ def convertFile(file, outputfolder, name, parameters, progress = None):
 
   os.chdir(currdir)
 
+def checkCommand():
+  command = ["collada2gltf", "-v"]
+  try:
+    with open(os.devnull, "w") as fnull:
+      result = subprocess.call(command, stdout = fnull, stderr = fnull)
+      return True
+  except:
+    return False
 
 def runFromCLI(param):
   file = open(param, mode = 'r')
