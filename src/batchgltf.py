@@ -42,7 +42,7 @@ class ProgressWindow(tk.Toplevel):
 class App(tk.Tk):
   def __init__(self, *args, **kwargs):
     tk.Tk.__init__(self, *args, **kwargs)
-    self.MAGIC = 'v1.0'
+    self.MAGIC = 'v2.0'
     self.title('a COLLADA -> glTF batch converter')
     ww = 700
     wh = 500
@@ -134,23 +134,28 @@ class App(tk.Tk):
   def openSettings(self, event = None):
     file = tkFileDialog.askopenfile(parent = self, title = "Select Settings File:")
     if not file: return
+    nosettings = False
     self.newSettings()
     for line in file:
       l = line.strip().split('=')
+      if len(l) == 1:
+        if l[0] != self.MAGIC:
+          nosettings = True
+          tkMessageBox.showwarning('batchgltf', 'Warning: This settings file is from an different version.\nPaths will be loaded, but settings will be DISCARDED.')
       if l[0] == 'src':
         path = os.path.normpath(l[1])
         self.fromlist.insert(tk.END, path)
       elif l[0] == 'dst':
         path = os.path.normpath(l[1])
         self.tolist.insert(tk.END, path)
-      elif l[0] == 'params':
+      elif l[0] == 'params' and not nosettings:
         params = l[1].split(';')
         for p in params:
           if p == "-e": self.embed_resources.set(1)
           if p == "-k": self.use_materials_common.set(1)
           if p == "-i": self.invert_transparency.set(1)
           if p == "-l": self.default_lighting.set(1)
-      elif l[0] == 'options':
+      elif l[0] == 'options' and not nosettings:
         options = l[1].split(';')
         for o in options:
           if o == "deldae": self.delete_dae.set(1)
@@ -277,7 +282,7 @@ def convertFile(file, outputfolder, name, parameters, progress = None):
   os.chdir(currdir)
 
 def checkCommand():
-  command = ["collada2gltf", "-v"]
+  command = ["COLLADA2GLTF-bin", "-v"]
   try:
     with open(os.devnull, "w") as fnull:
       result = subprocess.call(command, stdout = fnull, stderr = fnull)
